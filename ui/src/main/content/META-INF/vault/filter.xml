@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+<filter mode="xxx" root="..."/>
+ Modes: replace, merge, update
+ - Replace: Default. Replaces content of "root" content tree w package contents
+ - Merge: New content is added but existing content is not touch
+ - Update: Existing content is updated (overwritten) but not removed
+-->
+<workspaceFilter vesion="1.0">
+	<filter root="/apps/vendors/activecq/experiments" />
+	<filter root="/apps/vendors/activecq/install">
+        <include pattern="/apps/vendors/activecq/install/com.activecq.experiments.*core.*.jar" />
+	</filter>
+</workspaceFilter>

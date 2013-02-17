@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metatype:MetaData xmlns:metatype="http://www.osgi.org/xmlns/metatype/v1.0.0" localization="OSGI-INF/metatype/metatype">
+    <OCD id="com.activecq.experiments.activedecorator.resourcedecorators.PrimaryTypeResourceDecorator" name="ActiveCQ Experiments - Sample Resource Decorator" description="Sample">
+        <AD id="prop.primary-types" type="String" default="cq:PageContent" name="Primary Types" description="Primary Types to decorate"/>
+    </OCD>
+    <OCD id="com.activecq.experiments.activedecorator.resourcedecorators.ResourceTypeResourceDecorator" name="ActiveCQ Experiments - Sample Resource Decorator" description="Sample">
+        <AD id="prop.resource-types" type="String" default="vendors/activecq/samples/components/fake" name="Resource Types" description="Resource Types to decorate"/>
+    </OCD>
+    <Designate pid="com.activecq.experiments.activedecorator.resourcedecorators.PrimaryTypeResourceDecorator">
+        <Object ocdref="com.activecq.experiments.activedecorator.resourcedecorators.PrimaryTypeResourceDecorator"/>
+    </Designate>
+    <Designate pid="com.activecq.experiments.activedecorator.resourcedecorators.ResourceTypeResourceDecorator">
+        <Object ocdref="com.activecq.experiments.activedecorator.resourcedecorators.ResourceTypeResourceDecorator"/>
+    </Designate>
+</metatype:MetaData>

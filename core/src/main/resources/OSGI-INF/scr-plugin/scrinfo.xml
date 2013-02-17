@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<components xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0">
+    <scr:component enabled="true" immediate="false" name="com.activecq.experiments.activedecorator.resourcedecorators.base.AbstractResourceDecorator">
+        <implementation class="com.activecq.experiments.activedecorator.resourcedecorators.base.AbstractResourceDecorator"/>
+        <property name="service.vendor" type="String" value="ActiveCQ" private="true" label="Vendor"/>
+        <property name="service.pid" value="com.activecq.experiments.activedecorator.resourcedecorators.base.AbstractResourceDecorator" private="false"/>
+    </scr:component>
+    <scr:component enabled="true" immediate="false" name="com.activecq.experiments.activedecorator.resourcedecorators.base.AbstractPrimaryTypeResourceDecorator" activate="activate" deactivate="deactivate">
+        <implementation class="com.activecq.experiments.activedecorator.resourcedecorators.base.AbstractPrimaryTypeResourceDecorator"/>
+        <property name="service.vendor" type="String" value="ActiveCQ" private="true" label="Vendor"/>
+        <property name="prop.primary-types" type="String" value="" private="false" label="Primary Types" description="Primary Types to decorate"/>
+        <property name="service.pid" value="com.activecq.experiments.activedecorator.resourcedecorators.base.AbstractPrimaryTypeResourceDecorator" private="false"/>
+    </scr:component>
+    <scr:component enabled="true" immediate="false" name="com.activecq.experiments.activedecorator.resourcedecorators.base.AbstractResourceTypeResourceDecorator" activate="activate" deactivate="deactivate">
+        <implementation class="com.activecq.experiments.activedecorator.resourcedecorators.base.AbstractResourceTypeResourceDecorator"/>
+        <property name="service.vendor" type="String" value="ActiveCQ" private="true" label="Vendor"/>
+        <property name="prop.resource-types" type="String" value="" private="false" label="Resource Types" description="Resource Types to decorate"/>
+        <property name="service.pid" value="com.activecq.experiments.activedecorator.resourcedecorators.base.AbstractResourceTypeResourceDecorator" private="false"/>
+    </scr:component>
+    <scr:component enabled="true" immediate="false" name="com.activecq.experiments.activedecorator.resourcedecorators.PrimaryTypeResourceDecorator" activate="activate" deactivate="deactivate">
+        <implementation class="com.activecq.experiments.activedecorator.resourcedecorators.PrimaryTypeResourceDecorator"/>
+        <service servicefactory="false">
+            <provide interface="org.apache.sling.api.resource.ResourceDecorator"/>
+        </service>
+        <property name="service.vendor" type="String" value="ActiveCQ" private="false"/>
+        <property name="prop.primary-types" type="String" value="cq:PageContent" private="false"/>
+        <property name="service.pid" value="com.activecq.experiments.activedecorator.resourcedecorators.PrimaryTypeResourceDecorator" private="false"/>
+        <reference name="xssFilter" interface="com.adobe.granite.xss.XSSFilter" cardinality="1..1" policy="static" bind="bindXssFilter" unbind="unbindXssFilter" checked="true" strategy="event"/>
+    </scr:component>
+    <scr:component enabled="true" immediate="false" name="com.activecq.experiments.activedecorator.resourcedecorators.ResourceTypeResourceDecorator" activate="activate" deactivate="deactivate">
+        <implementation class="com.activecq.experiments.activedecorator.resourcedecorators.ResourceTypeResourceDecorator"/>
+        <service servicefactory="false">
+            <provide interface="org.apache.sling.api.resource.ResourceDecorator"/>
+        </service>
+        <property name="service.vendor" type="String" value="ActiveCQ" private="false"/>
+        <property name="prop.resource-types" type="String" value="vendors/activecq/samples/components/fake" private="false"/>
+        <property name="service.pid" value="com.activecq.experiments.activedecorator.resourcedecorators.ResourceTypeResourceDecorator" private="false"/>
+        <reference name="xssFilter" interface="com.adobe.granite.xss.XSSFilter" cardinality="1..1" policy="static" bind="bindXssFilter" unbind="unbindXssFilter" checked="true" strategy="event"/>
+    </scr:component>
+</components>
