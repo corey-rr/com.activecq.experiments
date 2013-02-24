@@ -25,7 +25,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <project.ui.apps.installdir>/apps/vendors/activecq/install</project.ui.apps.installdir>
+        <project.ui.apps.installdir>/apps//install</project.ui.apps.installdir>
         <project.ui.basedir>${project.parent.basedir}/ui</project.ui.basedir>
         <project.core.basedir>${project.parent.basedir}/core</project.core.basedir>
 
@@ -153,7 +153,7 @@
             <dependency>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>org.apache.felix.scr.annotations</artifactId>
-                <version>1.6.0</version>
+                <version>1.7.0</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>

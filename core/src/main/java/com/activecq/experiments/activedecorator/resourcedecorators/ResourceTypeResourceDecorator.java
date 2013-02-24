@@ -16,6 +16,8 @@
 
 package com.activecq.experiments.activedecorator.resourcedecorators;
 
+
+
 import com.activecq.experiments.activedecorator.mapdecorators.I18nMapDecorator;
 import com.activecq.experiments.activedecorator.mapdecorators.XSSMapDecorator;
 import com.activecq.experiments.activedecorator.resourcedecorators.base.AbstractResourceTypeResourceDecorator;
@@ -79,6 +81,8 @@ public class ResourceTypeResourceDecorator extends AbstractResourceTypeResourceD
 
         map.put("jcr:title", "Overwritten title");
         map.put("title", "This is the derived title");
+
+        resource.getResourceMetadata().put("metadata-val", "added to resource directly");
 
         wrapper.putAll(map);
 
