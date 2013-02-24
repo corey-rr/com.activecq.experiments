@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- http://dev.day.com/docs/en/cq/current/developing/components.html -->
+
+<!--
+    cq:dialogMode=floating requires setting height and width properties on the Dialog
+    cq:layout=auto|rollover|editbar
+    cq:dialogMode=auto|floating|inline
+    cq:actions=text:<some text>,-,edit,delete,insert,copymove
+-->
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="cq:EditConfig"
+    cq:dialogMode="auto"
+    cq:layout="auto"
+    cq:emptyText="Drag page here"
+    cq:inherit="{Boolean}false">
+
+    <cq:dropTargets
+        jcr:primaryType="nt:unstructured">
+        <!-- Create node for each drop target in the component -->
+        <target-1
+            jcr:primaryType="cq:DropTargetConfig"
+            accept="[.*,page/.*]"
+            groups="[paragraph, page]"
+            propertyName="./pageReference">
+
+            <!-- Defines how dropped nodes should be created. This can include subnodes under parameters as well (ex. textimage would have a image subnode) -->
+            <parameters
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="vendors/activecq/tools/component-library/components/content"/>
+        </target-1>
+    </cq:dropTargets>
+
+    <!-- REFRESH_SELF, REFRESH_PARENT, REFRESH_PAGE -->
+    <!--
+    <cq:listeners
+        jcr:primaryType="cq:EditListenersConfig"
+        beforedelete=""
+        beforeedit=""
+        beforecopy=""
+        beforeinsert=""
+        beforemove=""
+        beforechildinsert=""
+        afterdelete="REFRESH_SELF"
+        afteredit="REFRESH_SELF"
+        aftercopy="REFRESH_SELF"
+        afterinsert="REFRESH_INSERTED"
+        aftermove="REFRESH_SELFMOVED"
+        afterchildinsert=""
+    />
+    -->
+
+    <!--
+    editorType="text|title|plaintext"
+    configPath="path to config, replaces config sub-node
+    -->
+    <!--
+    <cq:inplaceEditing
+        jcr:primaryType="cq:InplaceEditingConfig"
+        active="{Boolean}true"
+        configPath="optional-or-use-config-sub-node"
+        editorType="text">
+    -->
+        <!-- Inplace Editting Config -->
+    <!--
+        <config
+            jcr:primaryType="nt:unstructured"
+            titleTag="[h1,h2,h3,h4,h5]"
+            textTag="[p]"
+            plaintextTag="[p]" />
+    </cq:inplaceEditing>
+    -->
+</jcr:root>
