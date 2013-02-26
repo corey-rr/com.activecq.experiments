@@ -38,7 +38,7 @@ import java.util.*;
  * @author david
  */
 @Component(
-        label = "ActiveCQ Experiments - Sling Resource Provider",
+        label = "ActiveCQ Experiments - Sling Resource Provider for Redis",
         description = "Sample Sling Resource Provider",
         metatype=false,
         immediate=false
@@ -60,10 +60,13 @@ import java.util.*;
 public class RedisResourceProvider implements ResourceProvider {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    private static final String DEFAULT_PRIMARY_TYPE = "redis:hash";
-    private static final String DEFAULT_RESOURCE_TYPE = "nt:unstructured";
-    private Jedis jedis;
+
+    private static final String DEFAULT_PRIMARY_TYPE = RedisManager.REDIS_JCR_PRIMARY_TYPE;
+    private static final String DEFAULT_RESOURCE_TYPE = RedisManager.REDIS_SLING_RESOURCE_TYPE;
     private List<String> roots;
+
+    @Reference
+    private RedisManager redisManager;
 
     @Override
     public Resource getResource(ResourceResolver resourceResolver, HttpServletRequest request, String path) {
@@ -78,6 +81,10 @@ public class RedisResourceProvider implements ResourceProvider {
 
     @Override
     public Resource getResource(ResourceResolver resourceResolver, String path) {
+        return getResource(resourceResolver, path, DEFAULT_RESOURCE_TYPE);
+    }
+
+    public Resource getResource(ResourceResolver resourceResolver, String path, String resourceType) {
         log.debug("Redis getResource for: {}", path);
         // Make getResource() return as fast as possible!
         // Return null early if getResource() cannot/should not process the resource request
@@ -95,18 +102,16 @@ public class RedisResourceProvider implements ResourceProvider {
         log.debug("Checking if path {} existing in redis", path);
 
         // If path does not exist in Redis, then return null immediately
-        if(!this.getJedis().exists(path)) { return null; }
+        if(!redisManager.resourceExists(path)) { return null; }
 
         log.debug("Path {} EXISTS in redis", path);
+        final String redisKey = redisManager.getResourceKey(path);
 
-        Map<String, String> redisMap = new HashMap<String, String>();
-        redisMap.putAll(this.getJedis().hgetAll(path));
-        redisMap = setDefaultProperties(redisMap);
+        Map<String, String> redisMap = setDefaultProperties(new HashMap<String, String>());
+        redisMap.putAll(this.getJedis().hgetAll(redisKey));
 
         final ResourceMetadata resourceMetaData = new ResourceMetadata();
         resourceMetaData.setResolutionPath(path);
-
-        final String resourceType = this.getResourceType(redisMap);
 
         log.debug("resourceType used; {}", resourceType);
 
@@ -117,25 +122,30 @@ public class RedisResourceProvider implements ResourceProvider {
     @Override
     public Iterator<Resource> listChildren(Resource parent) {
         final String path = parent.getPath();
-
+        log.debug("-- Start ---------------------------");
+        log.debug("list children for: {}", path);
         // Check the user/group issuing the resource resolution request
         if(!accepts(parent.getResourceResolver())) { return null; }
 
         // Reject any paths that do not match the roots
+        log.debug("accept path {}: {}", path, accepts(path));
         if(!accepts(path)) { return null; }
 
         final ResourceResolver resourceResolver = parent.getResourceResolver();
         final List<Resource> children = new ArrayList<Resource>();
 
-        final String childPattern = "^" + parent.getPath() + "/([^/\\s])+$";
-        final Set<String> redisChildren = this.getJedis().keys(childPattern);
-
+        final Set<String> redisChildren = redisManager.getChildren(path);
         for(final String redisChild : redisChildren) {
-            final Resource resource = this.getResource(resourceResolver, redisChild);
+            final Resource resource = this.getResource(resourceResolver, redisChild, RESOURCE_TYPE_SYNTHETIC);
+
+            log.debug("redis child: {} is null: {}", redisChild, resource == null);
+
             if(resource != null) {
+                log.debug("resource is NOT null, add to children!");
                 children.add(resource);
             }
         }
+        log.debug("-- End Children ---------------------------");
 
         return children.iterator();
     }
@@ -198,7 +208,7 @@ public class RedisResourceProvider implements ResourceProvider {
      * @return
      */
     protected Jedis getJedis() {
-        return this.jedis;
+        return redisManager.getJedis();
     }
 
 
@@ -208,11 +218,22 @@ public class RedisResourceProvider implements ResourceProvider {
      * @return
      */
     protected String getResourceType(Map<String, String> redisMap) {
-        if(redisMap.containsKey(JcrResourceConstants.SLING_RESOURCE_TYPE_PROPERTY)) {
-           return redisMap.get(JcrResourceConstants.SLING_RESOURCE_SUPER_TYPE_PROPERTY);
-        }
+        //if(redisMap.containsKey(JcrResourceConstants.SLING_RESOURCE_TYPE_PROPERTY)) {
+        //   return redisMap.get(JcrResourceConstants.SLING_RESOURCE_SUPER_TYPE_PROPERTY);
+        //}
 
         return DEFAULT_RESOURCE_TYPE;
+    }
+
+
+
+
+    /**
+     *
+     * @return
+     */
+    protected String getWorkspace() {
+        return redisManager.getWorkspace();
     }
 
     /**
@@ -223,6 +244,10 @@ public class RedisResourceProvider implements ResourceProvider {
     protected Map<String, String> setDefaultProperties(Map<String, String> redisMap) {
         if(!redisMap.containsKey(JcrConstants.JCR_PRIMARYTYPE)) {
             redisMap.put(JcrConstants.JCR_PRIMARYTYPE, DEFAULT_PRIMARY_TYPE);
+        }
+
+        if(!redisMap.containsKey(JcrResourceConstants.SLING_RESOURCE_TYPE_PROPERTY)) {
+            redisMap.put(JcrResourceConstants.SLING_RESOURCE_TYPE_PROPERTY, DEFAULT_RESOURCE_TYPE);
         }
 
         return redisMap;
@@ -259,7 +284,6 @@ public class RedisResourceProvider implements ResourceProvider {
             this.roots.add(StringUtils.removeEnd(root, "/"));
         }
 
-        this.jedis = new Jedis("127.0.0.1", 6379);
-        log.debug("Jedis ping: " + this.jedis.ping());
+        log.debug("Redis ping: {} ", this.getJedis().ping());
     }
 }

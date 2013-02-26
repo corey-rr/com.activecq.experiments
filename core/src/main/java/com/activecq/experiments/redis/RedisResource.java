@@ -21,15 +21,18 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
  * User: david
  */
 public class RedisResource extends SyntheticResource {
-    private Map<String, Object> valueMap = new HashMap<String, Object>();
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
+
+    private final Map<String, Object> valueMap;
 
     public RedisResource(ResourceResolver resourceResolver, String path, String resourceType, Map<String, String> valueMap) {
         super(resourceResolver, path, resourceType);
