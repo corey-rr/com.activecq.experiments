@@ -28,7 +28,6 @@ import org.osgi.framework.Constants;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import redis.clients.jedis.Jedis;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
@@ -104,11 +103,9 @@ public class RedisResourceProvider implements ResourceProvider {
         // If path does not exist in Redis, then return null immediately
         if(!redisManager.resourceExists(path)) { return null; }
 
-        log.debug("Path {} EXISTS in redis", path);
-        final String redisKey = redisManager.getResourceKey(path);
 
         Map<String, String> redisMap = setDefaultProperties(new HashMap<String, String>());
-        redisMap.putAll(this.getJedis().hgetAll(redisKey));
+        redisMap.putAll(redisManager.getResourceProperties(path));
 
         final ResourceMetadata resourceMetaData = new ResourceMetadata();
         resourceMetaData.setResolutionPath(path);
@@ -199,18 +196,6 @@ public class RedisResourceProvider implements ResourceProvider {
         return true;
     }
 
-    /**
-     * Redis specific helpers
-     */
-
-    /**
-     *
-     * @return
-     */
-    protected Jedis getJedis() {
-        return redisManager.getJedis();
-    }
-
 
     /**
      *
@@ -283,7 +268,5 @@ public class RedisResourceProvider implements ResourceProvider {
 
             this.roots.add(StringUtils.removeEnd(root, "/"));
         }
-
-        log.debug("Redis ping: {} ", this.getJedis().ping());
     }
 }
