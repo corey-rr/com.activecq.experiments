@@ -19,15 +19,19 @@ package com.activecq.experiments.redis.impl;
 import com.activecq.experiments.redis.RedisManager;
 import org.apache.commons.lang.StringUtils;
 import org.apache.felix.scr.annotations.*;
-import org.apache.felix.scr.annotations.Properties;
 import org.apache.jackrabbit.JcrConstants;
 import org.osgi.framework.Constants;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * User: david
@@ -49,12 +53,16 @@ import java.util.*;
 public class RedisManagerImpl implements RedisManager {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    private Jedis jedis;
+    public JedisPool jedisPool;
     private String host = "localhost";
     private int port = 6379;
 
     public Jedis getJedis() {
-        return this.jedis;
+        return this.jedisPool.getResource();
+    }
+
+    public void returnJedis(final Jedis jedis) {
+        this.jedisPool.returnResource(jedis);
     }
 
     public String getResourceKey(final String path) {
@@ -67,8 +75,13 @@ public class RedisManagerImpl implements RedisManager {
 
     @Override
     public Set<String> getChildren(String path) {
-        log.debug("Getting children using: " + this.getChildrenKey(path));
-        return this.getJedis().smembers(this.getChildrenKey(path));
+        final Jedis jedis = this.getJedis();
+
+        try {
+            return jedis.smembers(this.getChildrenKey(path));
+        } finally {
+            this.returnJedis(jedis);
+        }
     }
 
     /**
@@ -77,18 +90,24 @@ public class RedisManagerImpl implements RedisManager {
      * @param map
      */
     public void addResource(final String path, Map<String, ? extends Object> map) {
-        this.addChildren(path);
+        final Jedis jedis = this.getJedis();
 
-        final String key = this.getResourceKey(path);
+        try {
+            this.addChildren(path);
 
-        for(final String property : map.keySet()) {
-            final Object obj = map.get(property);
-            if(obj instanceof byte[]) {
-                final byte[] bytes = (byte[]) obj;
-                this.getJedis().hset(key.getBytes(), property.getBytes(), bytes);
-            } else {
-                this.getJedis().hset(key, property, this.toString(obj));
+            final String key = this.getResourceKey(path);
+
+            for(final String property : map.keySet()) {
+                final Object obj = map.get(property);
+                if(obj instanceof byte[]) {
+                    final byte[] bytes = (byte[]) obj;
+                    this.getJedis().hset(key.getBytes(), property.getBytes(), bytes);
+                } else {
+                    this.getJedis().hset(key, property, this.toString(obj));
+                }
             }
+        } finally {
+            this.returnJedis(jedis);
         }
     }
 
@@ -101,16 +120,58 @@ public class RedisManagerImpl implements RedisManager {
      * @return
      */
     public void removeResource(final String path) {
+
         for(final String child : this.getChildren(path)) {
             removeResource(child);
         }
 
-       this.getJedis().del(this.getResourceKey(path), this.getChildrenKey(path));
+        final Jedis jedis = this.getJedis();
+
+        try {
+            jedis.del(this.getResourceKey(path), this.getChildrenKey(path));
+
+            /**
+             * Remove dangling children records for parents that now have no children
+             * (the removed node was the parents only child)
+             */
+            String parentPath = StringUtils.substringBeforeLast(path, "/");
+            if(StringUtils.isBlank(parentPath)) {
+                parentPath = "/";
+            }
+
+            if(jedis.exists(this.getChildrenKey(parentPath))) {
+                if(jedis.smembers(this.getChildrenKey(parentPath)).size() > 1) {
+                    // Remove the path from the set
+                    jedis.srem(this.getChildrenKey(parentPath), path);
+                } else {
+                    jedis.del(this.getChildrenKey(parentPath));
+                }
+            }
+        } finally {
+            this.returnJedis(jedis);
+        }
+    }
+
+    @Override
+    public Map<String, String> getResourceProperties(final String path) {
+        final Jedis jedis = this.getJedis();
+
+        try {
+            return jedis.hgetAll(this.getResourceKey(path));
+        } finally {
+            this.returnJedis(jedis);
+        }
     }
 
     @Override
     public boolean resourceExists(final String path) {
-        return this.getJedis().exists(this.getResourceKey(path));
+        final Jedis jedis = this.getJedis();
+
+        try {
+            return jedis.exists(this.getResourceKey(path));
+        } finally {
+            this.returnJedis(jedis);
+        }
     }
 
     @Override
@@ -131,22 +192,29 @@ public class RedisManagerImpl implements RedisManager {
      * @return
      */
     private void addChildren(final String path) {
-        String[] segments = StringUtils.split(path, "/");
+        final Jedis jedis = this.getJedis();
 
-        final ArrayList<String> builder = new ArrayList<String>();
+        try {
+            String[] segments = StringUtils.split(path, "/");
 
-        for(final String segment : segments) {
-            final String key = this.getChildrenKey("/" + StringUtils.join(builder, "/"));
+            final ArrayList<String> builder = new ArrayList<String>();
 
-            builder.add(segment);
+            for(final String segment : segments) {
+                final String key = this.getChildrenKey("/" + StringUtils.join(builder, "/"));
 
-            final String value = "/" + StringUtils.join(builder, "/");
+                builder.add(segment);
 
-            if(!this.getJedis().exists(this.getResourceKey(value))) {
-                this.getJedis().hset(this.getResourceKey(value), JcrConstants.JCR_PRIMARYTYPE, "redis:hash");
+                final String value = "/" + StringUtils.join(builder, "/");
+
+                if(!jedis.exists(this.getResourceKey(value))) {
+                    // Create missing "middle nodes"
+                    jedis.hset(this.getResourceKey(value), JcrConstants.JCR_PRIMARYTYPE, REDIS_JCR_PRIMARY_TYPE);
+                }
+
+                jedis.sadd(key, value);
             }
-
-            this.getJedis().sadd(key, value);
+        } finally {
+            this.returnJedis(jedis);
         }
     }
 
@@ -195,9 +263,7 @@ public class RedisManagerImpl implements RedisManager {
      */
     @Activate
     protected void activate(final ComponentContext componentContext) throws Exception {
-        log.debug("Activate");
         configure(componentContext);
-
     }
 
     @Deactivate
@@ -207,22 +273,25 @@ public class RedisManagerImpl implements RedisManager {
     private void configure(final ComponentContext componentContext) {
         final Map<String, String> properties = (Map<String, String>) componentContext.getProperties();
 
-        this.jedis = new Jedis(host, port);
-        log.debug("Jedis ping: " + this.jedis.ping());
+        final JedisPoolConfig poolConfig = new JedisPoolConfig();
+        poolConfig.setMaxActive(500);
 
-        String random = "/var/redis/testing";// + String.valueOf(new Random().nextInt());
+        poolConfig.setMinIdle(200);
+        poolConfig.setMaxIdle(400);
 
-        Map<String, Object> map = new HashMap<String, Object>();
-        map.put("jcr:title", "this is a string");
-        map.put("false", new Boolean(false));
-        map.put("true", new Boolean(true));
-        map.put("date", new Date());
-        map.put("int", 10);
-        map.put("long", 100L);
-        map.put("double", 1000D);
-        map.put("float", new Float(10000));
+        poolConfig.setMaxWait(1000);
 
-        this.addResource(random, map);
+        this.jedisPool = new JedisPool(poolConfig, host, port);
+
+
+        /* Ping Redis on Startup */
+
+        final Jedis pingJedis = this.getJedis();
+
+        try {
+            log.info("Redis ping: " + pingJedis.ping());
+        } finally {
+            this.returnJedis(pingJedis);
+        }
     }
-
 }
