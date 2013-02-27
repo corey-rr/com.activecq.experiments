@@ -35,6 +35,8 @@ public interface RedisManager {
 
     public Jedis getJedis();
 
+    public void returnJedis(final Jedis jedis);
+
     public String getResourceKey(final String path);
 
     public String getChildrenKey(final String path);
@@ -44,6 +46,8 @@ public interface RedisManager {
     public void addResource(final String path, Map<String, ? extends Object> map);
 
     public void removeResource(final String path);
+
+    public Map<String, String> getResourceProperties(final String path);
 
     public boolean resourceExists(final String path);
 
