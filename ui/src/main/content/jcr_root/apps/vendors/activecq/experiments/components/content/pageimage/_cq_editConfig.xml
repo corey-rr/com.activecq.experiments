@@ -17,7 +17,7 @@
 
 <jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
     jcr:primaryType="cq:EditConfig"
-    cq:actions="[edit]"
+    cq:actions="[text:Page Image - Aspect Ratios,-,edit]"
     cq:dialogMode="floating"
     cq:layout="editbar">
     <cq:dropTargets jcr:primaryType="nt:unstructured">
@@ -31,6 +31,7 @@
                 sling:resourceType="vendors/activecq/experiments/components/content/pageimage">
                 <image-16x10
                     jcr:primaryType="nt:unstructured"
+                    imageCrop="*/16,10"
                     sling:resourceType="vendors/activecq/experiments/components/content/pageimage"/>
             </cq:formParameters>
         </image-16x10>
@@ -44,6 +45,7 @@
                 sling:resourceType="vendors/activecq/experiments/components/content/pageimage">
                 <image-4x3
                     jcr:primaryType="nt:unstructured"
+                    imageCrop="*/4,3"
                     sling:resourceType="vendors/activecq/experiments/components/content/pageimage"/>
             </cq:formParameters>
         </image-4x3>

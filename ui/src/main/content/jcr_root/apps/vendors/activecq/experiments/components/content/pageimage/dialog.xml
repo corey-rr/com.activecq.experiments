@@ -21,17 +21,55 @@
     helpPath="en/cq/current/wcm/default_components.html#Image"
     xtype="tabpanel">
     <items jcr:primaryType="cq:WidgetCollection">
-        <resourceTypes
+        <instructions
                 jcr:primaryType="cq:Widget"
                 title="Instructions"
                 xtype="panel">
             <items jcr:primaryType="cq:WidgetCollection">
                 <instructions
                         jcr:primaryType="cq:Widget"
-                        value="Crop the images using each aspect ratio for this page. These cropped images will be used throughout the size to populate a variety of components."
+                        value="&lt;p>
+                                Crop the page image using each aspect ratio for this page.
+                            &lt;/p>
+
+                            &lt;br/>
+
+                            &lt;p>
+                                These cropped images will be used throughout the size to populate a variety of components.
+                            &lt;/p>
+
+                            &lt;br/>
+
+                            &lt;hr/>
+
+                            &lt;br/>
+
+                            &lt;p>
+                                Click on the tabs in the dialog, and then click on the Crop button in the bottom left corner.
+                            &lt;/p>
+
+                            &lt;br/>
+                            &lt;br/>
+
+                        "
                         hideLabel="{Boolean}true"
+                        ignoreData="{Boolean}true"
+                        hidden="{Boolean}false"
                         xtype="displayfield"/>
                         />
+                <previewButton
+                        jcr:primaryType="cq:Widget"
+                        ignoreData="{Boolean}true"
+                        text="Preview Image Crops"
+                        autoWidth="false"
+                        boxMaxWidth="{Long}200"
+                        width="{Long}200"
+                        boxMaxHeight="{Long}50"
+                        height="{Long}50"
+                        style="margin: 0 auto;"
+                        handler="function() { window.open(CQ.WCM.getPagePath() + '/_jcr_content/image.preview.html'); }"
+                        xtype="button"
+                    />
                 <image-16x10
                         jcr:primaryType="cq:Widget"
                         ignoreData="{Boolean}true"
@@ -45,10 +83,8 @@
                         name="./image-4x3/sling:resourceType"
                         value="vendors/activecq/experiments/components/content/pageimage"
                         xtype="hidden"/>
-
-
             </items>
-        </resourceTypes>
+        </instructions>
         <image-16x10
             jcr:primaryType="cq:Widget"
             allowUpload="{Boolean}false"
@@ -56,14 +92,13 @@
             disableFlush="{Boolean}true"
             cropParameter="./image-16x10/imageCrop"
             ddGroups="[disabled]"
-            fileNameParameter="fileName"
             fileReferenceParameter="fileReference"
             mapParameter=""
             name="./image-16x10/file"
-            requestSuffix="/image-16x10.img.png"
+            requestSuffix=".img.png"
             rotateParameter="./image-16x10/imageRotate"
-            title="Aspect Ratio: 16x10"
-            uploadTextReference="Add an image to the Page Properties"
+            title="16x10"
+            uploadTextReference="Add an image via Page Properties"
             xtype="html5smartimage">
             <cropConfig
                 jcr:primaryType="nt:unstructured">
@@ -101,14 +136,13 @@
             disableFlush="{Boolean}true"
             cropParameter="./image-4x3/imageCrop"
             ddGroups="[disabled]"
-            fileNameParameter="fileName"
             fileReferenceParameter="fileReference"
             mapParameter=""
             name="./image-4x3/file"
-            requestSuffix="/image-4x3.img.png"
+            requestSuffix=".img.png"
             rotateParameter="./image-4x3/imageRotate"
-            title="Aspect Ratio: 4x3"
-            uploadTextReference="Add an image to the Page Properties"
+            title="4x3"
+            uploadTextReference="Add an image via Page Properties"
             xtype="html5smartimage">
             <cropConfig
                     jcr:primaryType="nt:unstructured">

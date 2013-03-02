@@ -17,8 +17,12 @@
 package com.activecq.experiments.pageimage;
 
 import com.day.cq.wcm.api.Page;
+import com.day.cq.wcm.api.PageManager;
+import com.day.cq.wcm.api.designer.Design;
+import com.day.cq.wcm.api.designer.Designer;
 import com.day.cq.wcm.api.designer.Style;
 import com.day.cq.wcm.foundation.Image;
+import org.apache.commons.lang.StringUtils;
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -43,6 +47,8 @@ public class PageImage {
     public static final String BASE_IMG_SELECTOR = ".page.img";
 
     private final Image image;
+    private final boolean renderable;
+    private String alt;
 
     /**
      *
@@ -63,15 +69,17 @@ public class PageImage {
         this.image = new Image(cropResource);
 
         this.image.set(Image.PN_REFERENCE, imageProperties.get(Image.PN_REFERENCE, String.class));
-
         this.image.loadStyleData(style);
         this.image.setSelector(getSelectors(width, height));
-        this.image.setSuffix(this.getTimestamp(cropResource, imageResource) + image.getExtension());
-       /*
-        if (!currentDesign.equals(resourceDesign)) {
-            image.setSuffix(currentDesign.getId());
-        }
-        */
+
+        Long timestamp = this.getTimestamp(cropResource, imageResource);
+        timestamp += this.getDesignHash(imageResource);
+
+        this.image.setSuffix(String.valueOf(timestamp) + image.getExtension());
+
+        this.renderable = (cropResource != null && imageResource != null && image.hasContent());
+
+        this.alt = this.getAltFromPage(page, this.image.getAlt());
     }
 
     /**
@@ -96,7 +104,47 @@ public class PageImage {
      */
     public String getAlt() {
         // Change this to display alt-text from DAM Asset or Page
-        return this.image.getAlt();
+        return this.alt;
+    }
+
+    /**
+     * ./altText
+     * description
+     * pagetitle
+     * title
+     * navtitle
+     * default
+     *
+     * @param page
+     * @param defaultAlt
+     * @return
+     */
+    private String getAltFromPage(final Page page, final String defaultAlt) {
+        if(StringUtils.isNotBlank(page.getProperties().get(Image.PN_ALT, String.class))) {
+            return page.getProperties().get(Image.PN_ALT, String.class);
+        } else if(StringUtils.isNotBlank(page.getDescription())) {
+            return page.getDescription();
+        } else if (StringUtils.isNotBlank(page.getPageTitle())) {
+            return page.getPageTitle();
+        } else if (StringUtils.isNotBlank(page.getTitle())) {
+            return page.getTitle();
+        } else if (StringUtils.isNotBlank(page.getNavigationTitle())) {
+            return page.getNavigationTitle();
+        } else {
+            return defaultAlt;
+        }
+    }
+
+    public void setAlt(String alt) {
+        this.alt = alt;
+    }
+
+    public boolean hasContent() {
+        return this.renderable;
+    }
+
+    public boolean hasError() {
+        return !this.hasContent();
     }
 
     /**
@@ -137,29 +185,60 @@ public class PageImage {
      * @param cropResource
      * @return
      */
-    private String getTimestamp(final Resource imageResource, final Resource cropResource) {
+    private Long getTimestamp(final Resource imageResource, final Resource cropResource) {
         final ResourceResolver resourceResolver = imageResource.getResourceResolver();
-        final ValueMap imageProperties = imageResource.adaptTo(ValueMap.class);
-        final ValueMap cropProperties = cropResource.adaptTo(ValueMap.class);
-
-        final String fileReferencePath = imageProperties.get(Image.PN_REFERENCE, String.class);
-        final Resource fileReferenceResource = resourceResolver.resolve(fileReferencePath);
-
-        final Calendar imageTime = imageProperties.get(JcrConstants.JCR_LASTMODIFIED, imageProperties.get(JcrConstants.JCR_CREATED, Calendar.class));
-        final Calendar cropTime = cropProperties.get(JcrConstants.JCR_LASTMODIFIED, cropProperties.get(JcrConstants.JCR_CREATED, Calendar.class));
+        Calendar imageTime = null;
+        Calendar cropTime = null;
         Calendar fileReferenceTime = null;
 
-        if(fileReferenceResource != null) {
-            final ValueMap fileReferenceProperties = fileReferenceResource.adaptTo(ValueMap.class);
-            fileReferenceTime = fileReferenceProperties.get(JcrConstants.JCR_LASTMODIFIED, fileReferenceProperties.get(JcrConstants.JCR_CREATED, Calendar.class));
+        String fileReferencePath = null;
+
+        if(imageResource != null) {
+            final ValueMap imageProperties = imageResource.adaptTo(ValueMap.class);
+            if(imageProperties != null) {
+                fileReferencePath = imageProperties.get(Image.PN_REFERENCE, String.class);
+                imageTime = imageProperties.get(JcrConstants.JCR_LASTMODIFIED, imageProperties.get(JcrConstants.JCR_CREATED, Calendar.class));
+            }
         }
 
-        Long timestamp = imageTime.getTimeInMillis() + cropTime.getTimeInMillis();
-        if(fileReferenceTime != null) {
-            timestamp += fileReferenceTime.getTimeInMillis();
+        if(cropResource != null) {
+            final ValueMap cropProperties = cropResource.adaptTo(ValueMap.class);
+            if(cropProperties != null) {
+                cropTime = cropProperties.get(JcrConstants.JCR_LASTMODIFIED, cropProperties.get(JcrConstants.JCR_CREATED, Calendar.class));
+            }
         }
 
-        return String.valueOf(timestamp);
+        if(StringUtils.isNotBlank(fileReferencePath)) {
+            final Resource fileReferenceResource = resourceResolver.resolve(fileReferencePath);
+
+            if(fileReferenceResource != null) {
+                if(fileReferenceResource != null) {
+                    final ValueMap fileReferenceProperties = fileReferenceResource.adaptTo(ValueMap.class);
+                    if(fileReferenceProperties != null) {
+                        fileReferenceTime = fileReferenceProperties.get(JcrConstants.JCR_LASTMODIFIED, fileReferenceProperties.get(JcrConstants.JCR_CREATED, Calendar.class));
+                    }
+                }
+            }
+        }
+
+        Long timestamp = 0L;
+        timestamp += (imageTime != null) ? imageTime.getTimeInMillis() : 0L;
+        timestamp += (cropTime != null) ? cropTime.getTimeInMillis() : 0L;
+        timestamp += (fileReferenceTime != null) ? fileReferenceTime.getTimeInMillis() : 0L;
+
+        return timestamp;
     }
 
+    private Long getDesignHash(final Resource resource) {
+        final ResourceResolver resourceResolver = resource.getResourceResolver();
+        final PageManager pageManager = resourceResolver.adaptTo(PageManager.class);
+        final Page page = pageManager.getContainingPage(resource);
+
+        if(page == null) { return 0L; }
+
+        final Designer designer = resourceResolver.adaptTo(Designer.class);
+        final Design design = designer.getDesign(page);
+
+        return new Long(design.getId().hashCode());
+    }
 }
