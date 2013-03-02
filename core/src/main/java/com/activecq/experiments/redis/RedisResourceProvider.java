@@ -60,12 +60,12 @@ public class RedisResourceProvider implements ResourceProvider {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
 
-    private static final String DEFAULT_PRIMARY_TYPE = RedisManager.REDIS_JCR_PRIMARY_TYPE;
-    private static final String DEFAULT_RESOURCE_TYPE = RedisManager.REDIS_SLING_RESOURCE_TYPE;
+    private static final String DEFAULT_PRIMARY_TYPE = RedisResourceManager.REDIS_JCR_PRIMARY_TYPE;
+    private static final String DEFAULT_RESOURCE_TYPE = RedisResourceManager.REDIS_SLING_RESOURCE_TYPE;
     private List<String> roots;
 
     @Reference
-    private RedisManager redisManager;
+    private RedisResourceManager redisManager;
 
     @Override
     public Resource getResource(ResourceResolver resourceResolver, HttpServletRequest request, String path) {
