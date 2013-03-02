@@ -1,0 +1,1 @@
+<%@page session="false" extends="com.activecq.experiments.pageimage.PageImageServlet"%>

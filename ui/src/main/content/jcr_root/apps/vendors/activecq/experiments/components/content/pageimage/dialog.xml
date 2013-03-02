@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2012 david gonzalez.
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  -->
+
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:Dialog"
+    activeTab="{Long}0"
+    helpPath="en/cq/current/wcm/default_components.html#Image"
+    xtype="tabpanel">
+    <items jcr:primaryType="cq:WidgetCollection">
+        <resourceTypes
+                jcr:primaryType="cq:Widget"
+                title="Instructions"
+                xtype="panel">
+            <items jcr:primaryType="cq:WidgetCollection">
+                <instructions
+                        jcr:primaryType="cq:Widget"
+                        value="Crop the images using each aspect ratio for this page. These cropped images will be used throughout the size to populate a variety of components."
+                        hideLabel="{Boolean}true"
+                        xtype="displayfield"/>
+                        />
+                <image-16x10
+                        jcr:primaryType="cq:Widget"
+                        ignoreData="{Boolean}true"
+                        name="./image-16x10/sling:resourceType"
+                        value="vendors/activecq/experiments/components/content/pageimage"
+                        xtype="hidden"/>
+
+                <image-4x3
+                        jcr:primaryType="cq:Widget"
+                        ignoreData="{Boolean}true"
+                        name="./image-4x3/sling:resourceType"
+                        value="vendors/activecq/experiments/components/content/pageimage"
+                        xtype="hidden"/>
+
+
+            </items>
+        </resourceTypes>
+        <image-16x10
+            jcr:primaryType="cq:Widget"
+            allowUpload="{Boolean}false"
+            allowFileReference="{Boolean}true"
+            disableFlush="{Boolean}true"
+            cropParameter="./image-16x10/imageCrop"
+            ddGroups="[disabled]"
+            fileNameParameter="fileName"
+            fileReferenceParameter="fileReference"
+            mapParameter=""
+            name="./image-16x10/file"
+            requestSuffix="/image-16x10.img.png"
+            rotateParameter="./image-16x10/imageRotate"
+            title="Aspect Ratio: 16x10"
+            uploadTextReference="Add an image to the Page Properties"
+            xtype="html5smartimage">
+            <cropConfig
+                jcr:primaryType="nt:unstructured">
+                <aspectRatios
+                        jcr:primaryType="nt:unstructured">
+                    <aspectRatio-16x10
+                            jcr:primaryType="nt:unstructured"
+                            text="16x10"
+                            value="16,10"/>
+                </aspectRatios>
+            </cropConfig>
+            <listeners
+                    jcr:primaryType="nt:unstructured"
+                    beforehide="function() {
+                                    if(this.toolComponents) {
+                                        var tool = this.toolComponents.smartimageCrop.toolRef.userInterface;
+                                        if(tool.isVisible()) { tool.hide(); }
+                                    }
+                                }"
+                    beforeshow="function() {
+                                    if(this.toolComponents) {
+                                        var tool = this.toolComponents.smartimageCrop.toolRef.userInterface;
+                                        if(!tool.isVisible()) {
+                                            tool.show();
+                                            tool.setPosition(tool.saveX, tool.saveY);
+                                        }
+                                    }
+                                }"
+                    />
+        </image-16x10>
+        <image-4x3
+            jcr:primaryType="cq:Widget"
+            allowUpload="{Boolean}false"
+            allowFileReference="{Boolean}true"
+            disableFlush="{Boolean}true"
+            cropParameter="./image-4x3/imageCrop"
+            ddGroups="[disabled]"
+            fileNameParameter="fileName"
+            fileReferenceParameter="fileReference"
+            mapParameter=""
+            name="./image-4x3/file"
+            requestSuffix="/image-4x3.img.png"
+            rotateParameter="./image-4x3/imageRotate"
+            title="Aspect Ratio: 4x3"
+            uploadTextReference="Add an image to the Page Properties"
+            xtype="html5smartimage">
+            <cropConfig
+                    jcr:primaryType="nt:unstructured">
+                <aspectRatios
+                        jcr:primaryType="nt:unstructured">
+                    <aspectRatio-4x3
+                            jcr:primaryType="nt:unstructured"
+                            text="4x3"
+                            value="4,3"/>
+                </aspectRatios>
+            </cropConfig>
+            <listeners
+                    jcr:primaryType="nt:unstructured"
+                    beforehide="function() {
+                                    if(this.toolComponents) {
+                                        var tool = this.toolComponents.smartimageCrop.toolRef.userInterface;
+                                        if(tool.isVisible()) { tool.hide(); }
+                                    }
+                                }"
+                    beforeshow="function() {
+                                    if(this.toolComponents) {
+                                        var tool = this.toolComponents.smartimageCrop.toolRef.userInterface;
+                                        if(!tool.isVisible()) {
+                                            tool.show();
+                                            tool.setPosition(tool.saveX, tool.saveY);
+                                        }
+                                    }
+                                }"
+                    />
+        </image-4x3>
+    </items>
+</jcr:root>
