@@ -189,7 +189,6 @@ public class RedisResourceProvider implements ResourceProvider {
     protected boolean accepts(ResourceResolver resourceResolver) {
         if(resourceResolver == null) { return false; }
         if(StringUtils.equals("anonymous", resourceResolver.getUserID())) {
-            // Terrible "anonymous" check, this is just for an example
             return false;
         }
 

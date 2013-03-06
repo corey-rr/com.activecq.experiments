@@ -32,37 +32,20 @@ import java.util.Map;
 /**
  * User: david
  */
-public class RedisManagerImplTest {
-    RedisResourceManagerImpl redis;
-    Jedis jedis;
+public class RedisResourceManagerImplTest {
+    private JedisPool jedisPool;
+    private Jedis jedis;
 
     @Before
     public void setUp() throws Exception {
-        redis = new RedisResourceManagerImpl();
-
         final JedisPoolConfig poolConfig = new JedisPoolConfig();
-        poolConfig.setMaxActive(500);
+        poolConfig.setTestOnBorrow(true);
 
-        poolConfig.setMinIdle(200);
-        poolConfig.setMaxIdle(400);
-
-        poolConfig.setMaxWait(1000);
-
-        redis.jedisPool = new JedisPool(poolConfig, "localhost", 6379);
-
-
+        jedisPool = new JedisPool(poolConfig, "127.0.0.1");
         /* Ping Redis on Startup */
 
-        final Jedis pingJedis = redis.jedisPool.getResource();
-
-        try {
-            System.out.println("Redis ping: " + pingJedis.ping());
-        } finally {
-            redis.jedisPool.returnResource(pingJedis);
-        }
-
-
-        jedis = new Jedis("localhost", 6379);
+        jedis = jedisPool.getResource();
+        jedis.select(new RedisResourceManagerImpl().getRedisDB());
     }
 
     @After
@@ -87,14 +70,16 @@ public class RedisManagerImplTest {
                 "cq::children::crx.default::/a/b/3",
                 "cq::children::crx.default::/a/b/4",
                 "cq::children::crx.default::/a/c"
+         );
 
-               );
-
-
+        jedisPool.returnResource(jedis);
     }
 
     @Test
     public void testGetResourceKey() throws Exception {
+        RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
+        redis.setJedisPool(this.jedisPool);
+
         String expValue = "cq::resources::crx.default::/test/foo";
         String result = redis.getResourceKey("/test/foo");
         Assert.assertEquals(expValue, result);
@@ -102,6 +87,9 @@ public class RedisManagerImplTest {
 
     @Test
     public void testGetChildrenKey() throws Exception {
+        RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
+        redis.setJedisPool(this.jedisPool);
+
         String expValue = "cq::children::crx.default::/test/foo";
         String result = redis.getChildrenKey("/test/foo");
         Assert.assertEquals(expValue, result);
@@ -109,6 +97,9 @@ public class RedisManagerImplTest {
 
     @Test
     public void testGetChildren() throws Exception {
+        RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
+        redis.setJedisPool(this.jedisPool);
+
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("property", "value");
 
@@ -132,6 +123,9 @@ public class RedisManagerImplTest {
 
     @Test
     public void testAddResource() throws Exception {
+        RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
+        redis.setJedisPool(this.jedisPool);
+
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("string", "this is a string");
         map.put("double", 100D);
@@ -186,6 +180,10 @@ public class RedisManagerImplTest {
 
     @Test
     public void testRemoveResource() throws Exception {
+        RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
+        redis.setJedisPool(this.jedisPool);
+
+
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("property", "value");
 
@@ -217,6 +215,9 @@ public class RedisManagerImplTest {
 
     @Test
     public void testRemoveResource_2() throws Exception {
+        RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
+        redis.setJedisPool(this.jedisPool);
+
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("property", "value");
 
@@ -235,6 +236,9 @@ public class RedisManagerImplTest {
 
     @Test
     public void testResourceExists() throws Exception {
+        RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
+        redis.setJedisPool(this.jedisPool);
+
         Assert.assertFalse(redis.resourceExists("/exists"));
 
         jedis.hset("cq::resources::crx.default::/exists", "property", "value");
@@ -244,6 +248,8 @@ public class RedisManagerImplTest {
 
     @Test
     public void testGetWorkspace() throws Exception {
+        RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
+
         String expValue = "crx.default";
         String result = redis.getWorkspace();
         Assert.assertEquals(expValue, result);

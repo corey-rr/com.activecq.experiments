@@ -19,6 +19,7 @@ package com.activecq.experiments.redis.impl;
 import com.activecq.experiments.redis.RedisResourceManager;
 import org.apache.commons.lang.StringUtils;
 import org.apache.felix.scr.annotations.*;
+import org.apache.felix.scr.annotations.Properties;
 import org.apache.jackrabbit.JcrConstants;
 import org.osgi.framework.Constants;
 import org.osgi.service.component.ComponentContext;
@@ -28,10 +29,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * User: david
@@ -39,7 +37,7 @@ import java.util.Set;
 
 @Component(
         label = "ActiveCQ Experiments - Redis Manager",
-        description = "Redis resource mananger.",
+        description = "Redis resource manager.",
         metatype = true,
         immediate = true)
 @Properties({
@@ -52,26 +50,27 @@ import java.util.Set;
 @Service
 public class RedisResourceManagerImpl implements RedisResourceManager {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
+    private final static String AUTO_CHILD_NODE_NAME_PREFIX = "node-";
+    private final static String AUTO_CHILD_INDICATOR = "*";
 
-    private long redisWrites = 0;
-    public JedisPool jedisPool;
-    private int redisDB = 10;
+    private JedisPool jedisPool;
+
     private String host = "localhost";
     private int port = 6379;
+
+    private int redisDB = 10;
+
     private boolean immediateSave = false;
 
-    private synchronized long incrementWrites() {
-        this.redisWrites++;
-        return this.redisWrites;
-    }
 
-    private synchronized void clearSaves() {
-        this.redisWrites = 0;
+    public void setJedisPool(final JedisPool jedisPool) {
+        this.jedisPool = jedisPool;
     }
 
     public Jedis getJedis() {
         final Jedis jedis = this.jedisPool.getResource();
-        jedis.select(redisDB);
+
+        jedis.select(this.getRedisDB());
         return jedis;
     }
 
@@ -79,12 +78,21 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
         this.jedisPool.returnResource(jedis);
     }
 
+    public int getRedisDB() {
+        return this.redisDB;
+    }
+
+    public void setRedisDB(final int redisDB) {
+        this.redisDB = redisDB;
+    }
+
+
     public String getResourceKey(final String path) {
-        return REDIS_KEY_PREFIX_RESOURCES + DEFAULT_WORKSPACE + "::" + path;
+        return REDIS_KEY_PREFIX_RESOURCES + DEFAULT_WORKSPACE + REDIS_KEY_PREFIX_DELIMITER + path;
     }
 
     public String getChildrenKey(final String path) {
-        return REDIS_KEY_PREFIX_CHILDREN + DEFAULT_WORKSPACE + "::" + path;
+        return REDIS_KEY_PREFIX_CHILDREN + DEFAULT_WORKSPACE + REDIS_KEY_PREFIX_DELIMITER + path;
     }
 
     @Override
@@ -103,29 +111,40 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
      * @param path
      * @param map
      */
-    public void addResource(final String path, Map<String, ? extends Object> map) {
+    public String addResource(String path, Map<String, ? extends Object> map) {
+        int result = 0;
         final Jedis jedis = this.getJedis();
 
+        if(StringUtils.endsWith(path, "/" + AUTO_CHILD_INDICATOR)) {
+            final String tmp = StringUtils.removeEnd(path, AUTO_CHILD_INDICATOR);
+            path = tmp + AUTO_CHILD_NODE_NAME_PREFIX + UUID.randomUUID();
+        }
+
         try {
-            this.addChildren(path);
+            result += this.addChildren(path);
 
             final String key = this.getResourceKey(path);
 
             for(final String property : map.keySet()) {
                 final Object obj = map.get(property);
+
                 if(obj instanceof byte[]) {
                     final byte[] bytes = (byte[]) obj;
-                    this.getJedis().hset(key.getBytes(), property.getBytes(), bytes);
-                    this.incrementWrites();
+                    result += jedis.hset(key.getBytes(), property.getBytes(), bytes);
                 } else {
-                    this.getJedis().hset(key, property, this.toString(obj));
-                    this.incrementWrites();
+                    result += jedis.hset(key, property, this.toString(obj));
                 }
             }
 
             this.save(jedis);
         } finally {
             this.returnJedis(jedis);
+        }
+
+        if(result > 0) {
+            return path;
+        } else {
+            return null;
         }
     }
 
@@ -137,17 +156,19 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
      * @param path
      * @return
      */
-    public void removeResource(final String path) {
+    public boolean removeResource(final String path) {
+        int result = 0;
 
         for(final String child : this.getChildren(path)) {
-            removeResource(child);
+            if(removeResource(child)) {
+                result++;
+            }
         }
 
         final Jedis jedis = this.getJedis();
 
         try {
-            jedis.del(this.getResourceKey(path), this.getChildrenKey(path));
-            this.incrementWrites();
+            result += jedis.del(this.getResourceKey(path), this.getChildrenKey(path));
 
             /**
              * Remove dangling children records for parents that now have no children
@@ -161,11 +182,9 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
             if(jedis.exists(this.getChildrenKey(parentPath))) {
                 if(jedis.smembers(this.getChildrenKey(parentPath)).size() > 1) {
                     // Remove the path from the set
-                    jedis.srem(this.getChildrenKey(parentPath), path);
-                    this.incrementWrites();
+                    result += jedis.srem(this.getChildrenKey(parentPath), path);
                 } else {
-                    jedis.del(this.getChildrenKey(parentPath));
-                    this.incrementWrites();
+                    result += jedis.del(this.getChildrenKey(parentPath));
                 }
             }
 
@@ -173,6 +192,8 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
         } finally {
             this.returnJedis(jedis);
         }
+
+        return result > 0;
     }
 
     @Override
@@ -214,8 +235,9 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
      * @param path
      * @return
      */
-    private void addChildren(final String path) {
+    private int addChildren(final String path) {
         final Jedis jedis = this.getJedis();
+        int result = 0;
 
         try {
             String[] segments = StringUtils.split(path, "/");
@@ -231,28 +253,25 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
 
                 if(!jedis.exists(this.getResourceKey(value))) {
                     // Create missing "middle nodes"
-                    jedis.hset(this.getResourceKey(value), JcrConstants.JCR_PRIMARYTYPE, REDIS_JCR_PRIMARY_TYPE);
-                    this.incrementWrites();
+                    result += jedis.hset(this.getResourceKey(value), JcrConstants.JCR_PRIMARYTYPE, REDIS_JCR_PRIMARY_TYPE);
                 }
 
-                jedis.sadd(key, value);
-                this.incrementWrites();
+                result += jedis.sadd(key, value);
 
                 this.save(jedis);
             }
         } finally {
             this.returnJedis(jedis);
         }
+
+        return result;
     }
 
     private void save(final Jedis jedis) {
         if(this.immediateSave) {
             jedis.bgsave();
-            this.clearSaves();
        }
     }
-
-
 
     /**
      *
@@ -299,15 +318,20 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
      */
     @Activate
     protected void activate(final ComponentContext componentContext) throws Exception {
+        log.error("Activate");
         configure(componentContext);
     }
 
     @Deactivate
     protected void deactivate(ComponentContext ctx) {
+        this.jedisPool.destroy();
+        this.jedisPool = null;
     }
 
     private void configure(final ComponentContext componentContext) {
         final Map<String, String> properties = (Map<String, String>) componentContext.getProperties();
+
+        log.debug("configure");
 
         final JedisPoolConfig poolConfig = new JedisPoolConfig();
         poolConfig.setMaxActive(500);
@@ -316,18 +340,34 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
         poolConfig.setMaxIdle(400);
 
         poolConfig.setMaxWait(1000);
+        poolConfig.setTestOnBorrow(true);
 
-        this.jedisPool = new JedisPool(poolConfig, host, port);
+        this.setJedisPool(new JedisPool(poolConfig, host, port));
 
 
         /* Ping Redis on Startup */
 
-        final Jedis pingJedis = this.getJedis();
+        final Jedis configJedis = this.getJedis();
 
         try {
-            log.info("Redis ping: " + pingJedis.ping());
+            log.info("Redis ping: " + configJedis.ping());
+
+
+            // Enable append fsync
+            log.info("Set AOF: " + configJedis.configSet("appendfsync", "everysec"));
+
+            // Set dump filename for snapshotting
+            log.info("Set dumpfile : " + configJedis.configSet("dbfilename", "dump.rbd"));
+
+            // config set save x y x y
+            // Save after X seconds if there is Y changes
+            int seconds = 300;
+            int changes = 1;
+            log.info("Set snapshotting: " + configJedis.configSet("save", seconds + " " + changes));
+
+
         } finally {
-            this.returnJedis(pingJedis);
+            this.returnJedis(configJedis);
         }
     }
 }

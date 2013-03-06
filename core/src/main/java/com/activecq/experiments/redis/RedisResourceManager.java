@@ -27,6 +27,8 @@ import java.util.Set;
 public interface RedisResourceManager {
     public static final String REDIS_KEY_PREFIX_RESOURCES = "cq::resources::";
     public static final  String REDIS_KEY_PREFIX_CHILDREN = "cq::children::";
+    public static final  String REDIS_KEY_PREFIX_DELIMITER = "::";
+
 
     public static final  String REDIS_JCR_PRIMARY_TYPE = "redis:hash";
     public static final  String REDIS_SLING_RESOURCE_TYPE = "redis/resource";
@@ -37,19 +39,19 @@ public interface RedisResourceManager {
 
     public void returnJedis(final Jedis jedis);
 
+    public boolean resourceExists(final String path);
+
     public String getResourceKey(final String path);
+
+    public Map<String, String> getResourceProperties(final String path);
 
     public String getChildrenKey(final String path);
 
     public Set<String> getChildren(final String path);
 
-    public void addResource(final String path, Map<String, ? extends Object> map);
+    public String addResource(final String path, Map<String, ? extends Object> map);
 
-    public void removeResource(final String path);
-
-    public Map<String, String> getResourceProperties(final String path);
-
-    public boolean resourceExists(final String path);
+    public boolean removeResource(final String path);
 
     public String getWorkspace();
 }
