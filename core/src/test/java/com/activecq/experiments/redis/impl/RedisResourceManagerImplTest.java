@@ -78,7 +78,7 @@ public class RedisResourceManagerImplTest {
     @Test
     public void testGetResourceKey() throws Exception {
         RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
-        redis.setJedisPool(this.jedisPool);
+        //redis.setJedisPool(this.jedisPool);
 
         String expValue = "cq::resources::crx.default::/test/foo";
         String result = redis.getResourceKey("/test/foo");
@@ -88,7 +88,7 @@ public class RedisResourceManagerImplTest {
     @Test
     public void testGetChildrenKey() throws Exception {
         RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
-        redis.setJedisPool(this.jedisPool);
+        //redis.setJedisPool(this.jedisPool);
 
         String expValue = "cq::children::crx.default::/test/foo";
         String result = redis.getChildrenKey("/test/foo");
@@ -98,7 +98,7 @@ public class RedisResourceManagerImplTest {
     @Test
     public void testGetChildren() throws Exception {
         RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
-        redis.setJedisPool(this.jedisPool);
+        //redis.setJedisPool(this.jedisPool);
 
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("property", "value");
@@ -124,7 +124,7 @@ public class RedisResourceManagerImplTest {
     @Test
     public void testAddResource() throws Exception {
         RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
-        redis.setJedisPool(this.jedisPool);
+        //redis.setJedisPool(this.jedisPool);
 
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("string", "this is a string");
@@ -181,7 +181,7 @@ public class RedisResourceManagerImplTest {
     @Test
     public void testRemoveResource() throws Exception {
         RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
-        redis.setJedisPool(this.jedisPool);
+       // redis.setJedisPool(this.jedisPool);
 
 
         Map<String, Object> map = new HashMap<String, Object>();
@@ -216,7 +216,7 @@ public class RedisResourceManagerImplTest {
     @Test
     public void testRemoveResource_2() throws Exception {
         RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
-        redis.setJedisPool(this.jedisPool);
+        //redis.setJedisPool(this.jedisPool);
 
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("property", "value");
@@ -237,7 +237,7 @@ public class RedisResourceManagerImplTest {
     @Test
     public void testResourceExists() throws Exception {
         RedisResourceManagerImpl redis = new RedisResourceManagerImpl();
-        redis.setJedisPool(this.jedisPool);
+        //redis.setJedisPool(this.jedisPool);
 
         Assert.assertFalse(redis.resourceExists("/exists"));
 
