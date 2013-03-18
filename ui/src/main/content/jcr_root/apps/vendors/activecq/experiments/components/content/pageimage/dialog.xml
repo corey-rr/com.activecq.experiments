@@ -104,7 +104,7 @@
                     mapParameter=""
                     name="./image-16x10/file"
                     requestSuffix=".img.png"
-                    rotateParameter="./image-16x10/imageRotate"
+                    rotateParameter=""
                     title="16x10"
                     uploadTextReference="Add an image via Page Properties"
                     xtype="html5smartimage">
@@ -148,7 +148,7 @@
                     mapParameter=""
                     name="./image-4x3/file"
                     requestSuffix=".img.png"
-                    rotateParameter="./image-4x3/imageRotate"
+                    rotateParameter=""
                     title="4x3"
                     uploadTextReference="Add an image via Page Properties"
                     xtype="html5smartimage">
