@@ -16,6 +16,7 @@
 
 package com.activecq.experiments.redis.impl;
 
+import com.activecq.experiments.redis.RedisConnectionPool;
 import com.activecq.experiments.redis.RedisResourceManager;
 import org.apache.commons.lang.StringUtils;
 import org.apache.felix.scr.annotations.*;
@@ -26,8 +27,6 @@ import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 
 import java.util.*;
 
@@ -38,8 +37,9 @@ import java.util.*;
 @Component(
         label = "ActiveCQ Experiments - Redis Manager",
         description = "Redis resource manager.",
-        metatype = true,
-        immediate = true)
+        enabled = false,
+        metatype = false,
+        immediate = false)
 @Properties({
         @Property(
                 label = "Vendor",
@@ -50,10 +50,10 @@ import java.util.*;
 @Service
 public class RedisResourceManagerImpl implements RedisResourceManager {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
+
     private final static String AUTO_CHILD_NODE_NAME_PREFIX = "node-";
     private final static String AUTO_CHILD_INDICATOR = "*";
 
-    private JedisPool jedisPool;
 
     private String host = "localhost";
     private int port = 6379;
@@ -62,20 +62,18 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
 
     private boolean immediateSave = false;
 
-
-    public void setJedisPool(final JedisPool jedisPool) {
-        this.jedisPool = jedisPool;
-    }
+    @Reference
+    private RedisConnectionPool redisConnectionPool;
 
     public Jedis getJedis() {
-        final Jedis jedis = this.jedisPool.getResource();
+        final Jedis jedis = this.redisConnectionPool.getJedis();
 
         jedis.select(this.getRedisDB());
         return jedis;
     }
 
     public void returnJedis(final Jedis jedis) {
-        this.jedisPool.returnResource(jedis);
+        this.redisConnectionPool.returnJedis(jedis);
     }
 
     public int getRedisDB() {
@@ -85,7 +83,6 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
     public void setRedisDB(final int redisDB) {
         this.redisDB = redisDB;
     }
-
 
     public String getResourceKey(final String path) {
         return REDIS_KEY_PREFIX_RESOURCES + DEFAULT_WORKSPACE + REDIS_KEY_PREFIX_DELIMITER + path;
@@ -324,48 +321,17 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
 
     @Deactivate
     protected void deactivate(ComponentContext ctx) {
-        this.jedisPool.destroy();
-        this.jedisPool = null;
     }
 
     private void configure(final ComponentContext componentContext) {
         final Map<String, String> properties = (Map<String, String>) componentContext.getProperties();
 
-        log.debug("configure");
-
-        final JedisPoolConfig poolConfig = new JedisPoolConfig();
-        poolConfig.setMaxActive(500);
-
-        poolConfig.setMinIdle(200);
-        poolConfig.setMaxIdle(400);
-
-        poolConfig.setMaxWait(1000);
-        poolConfig.setTestOnBorrow(true);
-
-        this.setJedisPool(new JedisPool(poolConfig, host, port));
-
+        final Jedis configJedis = this.getJedis();
 
         /* Ping Redis on Startup */
 
-        final Jedis configJedis = this.getJedis();
-
         try {
             log.info("Redis ping: " + configJedis.ping());
-
-
-            // Enable append fsync
-            log.info("Set AOF: " + configJedis.configSet("appendfsync", "everysec"));
-
-            // Set dump filename for snapshotting
-            log.info("Set dumpfile : " + configJedis.configSet("dbfilename", "dump.rbd"));
-
-            // config set save x y x y
-            // Save after X seconds if there is Y changes
-            int seconds = 300;
-            int changes = 1;
-            log.info("Set snapshotting: " + configJedis.configSet("save", seconds + " " + changes));
-
-
         } finally {
             this.returnJedis(configJedis);
         }
