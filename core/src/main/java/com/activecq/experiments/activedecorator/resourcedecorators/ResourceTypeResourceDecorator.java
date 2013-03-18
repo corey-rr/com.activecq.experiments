@@ -39,7 +39,7 @@ import java.util.Map;
  * User: david
  */
 @Component(
-        label = "ActiveCQ Experiments - Sample Resource Decorator",
+        label = "ActiveCQ Experiments - Resource Type Resource Decorator",
         description = "Sample",
         metatype = true,
         immediate = false,
