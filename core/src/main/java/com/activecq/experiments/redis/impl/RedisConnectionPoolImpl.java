@@ -36,7 +36,7 @@ import java.util.Map;
  */
 
 @Component(
-        label = "ActiveCQ Experiments - Redis Connection Pool Manager",
+        label = "Experiments - Redis Connection Pool Manager",
         description = "Redis connection pool manager.",
         metatype = true,
         immediate = false)

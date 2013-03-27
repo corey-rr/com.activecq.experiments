@@ -45,7 +45,7 @@ public class RedisResourceManagerImplTest {
         /* Ping Redis on Startup */
 
         jedis = jedisPool.getResource();
-        jedis.select(new RedisResourceManagerImpl().getRedisDB());
+        //jedis.select(new RedisResourceManagerImpl().getRedisDB());
     }
 
     @After

@@ -37,7 +37,7 @@ import java.util.*;
  * @author david
  */
 @Component(
-        label = "ActiveCQ Experiments - Sling Resource Provider for Redis",
+        label = "Experiments - Sling Resource Provider for Redis",
         description = "Sample Sling Resource Provider",
         metatype=false,
         immediate=false

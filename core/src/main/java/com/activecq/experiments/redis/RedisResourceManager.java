@@ -18,6 +18,7 @@ package com.activecq.experiments.redis;
 
 import redis.clients.jedis.Jedis;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,10 +26,19 @@ import java.util.Set;
  * User: david
  */
 public interface RedisResourceManager {
+    public final static String AUTO_CHILD_NODE_NAME_PREFIX = "node-";
+    public final static String AUTO_CHILD_INDICATOR = "*";
+
     public static final String REDIS_KEY_PREFIX_RESOURCES = "cq::resources::";
     public static final  String REDIS_KEY_PREFIX_CHILDREN = "cq::children::";
-    public static final  String REDIS_KEY_PREFIX_DELIMITER = "::";
 
+    public static final String FULLTEXT = "cq::search::fulltext::";
+    public static final String FULLTEXT_LOOKUP = "cq::search::fulltext::lookup::";
+
+    public static final String PROPERTY = "cq::search::property::";
+    public static final String PROPERTY_LOOKUP = "cq::search::fulltext::lookup::";
+
+    public static final String REDIS_KEY_PREFIX_DELIMITER = "::";
 
     public static final  String REDIS_JCR_PRIMARY_TYPE = "redis:hash";
     public static final  String REDIS_SLING_RESOURCE_TYPE = "redis/resource";
@@ -51,7 +61,14 @@ public interface RedisResourceManager {
 
     public String addResource(final String path, Map<String, ? extends Object> map);
 
+    public boolean modifyResource(String path, Map<String, ? extends Object> map);
+
     public boolean removeResource(final String path);
 
     public String getWorkspace();
+
+    public String getRedisKey(final String keyType, final String key);
+
+    public List<String> search(final String term);
+
 }

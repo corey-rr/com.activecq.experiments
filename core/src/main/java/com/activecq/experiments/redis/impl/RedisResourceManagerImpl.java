@@ -35,9 +35,9 @@ import java.util.*;
  */
 
 @Component(
-        label = "ActiveCQ Experiments - Redis Manager",
+        label = "Experiments - Redis Manager",
         description = "Redis resource manager.",
-        enabled = false,
+        enabled = true,
         metatype = false,
         immediate = false)
 @Properties({
@@ -51,45 +51,29 @@ import java.util.*;
 public class RedisResourceManagerImpl implements RedisResourceManager {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    private final static String AUTO_CHILD_NODE_NAME_PREFIX = "node-";
-    private final static String AUTO_CHILD_INDICATOR = "*";
-
-
-    private String host = "localhost";
-    private int port = 6379;
-
-    private int redisDB = 10;
-
     private boolean immediateSave = false;
 
     @Reference
     private RedisConnectionPool redisConnectionPool;
 
     public Jedis getJedis() {
-        final Jedis jedis = this.redisConnectionPool.getJedis();
-
-        jedis.select(this.getRedisDB());
-        return jedis;
+        return this.redisConnectionPool.getJedis();
     }
 
     public void returnJedis(final Jedis jedis) {
         this.redisConnectionPool.returnJedis(jedis);
     }
 
-    public int getRedisDB() {
-        return this.redisDB;
-    }
-
-    public void setRedisDB(final int redisDB) {
-        this.redisDB = redisDB;
+    public String getRedisKey(final String keyType, final String key) {
+        return keyType + DEFAULT_WORKSPACE + REDIS_KEY_PREFIX_DELIMITER + key;
     }
 
     public String getResourceKey(final String path) {
-        return REDIS_KEY_PREFIX_RESOURCES + DEFAULT_WORKSPACE + REDIS_KEY_PREFIX_DELIMITER + path;
+        return this.getRedisKey(REDIS_KEY_PREFIX_RESOURCES, path);
     }
 
     public String getChildrenKey(final String path) {
-        return REDIS_KEY_PREFIX_CHILDREN + DEFAULT_WORKSPACE + REDIS_KEY_PREFIX_DELIMITER + path;
+        return this.getRedisKey(REDIS_KEY_PREFIX_CHILDREN, path);
     }
 
     @Override
@@ -133,7 +117,9 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
                 }
             }
 
+            this.index(path, map);
             this.save(jedis);
+
         } finally {
             this.returnJedis(jedis);
         }
@@ -144,6 +130,53 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
             return null;
         }
     }
+
+    /**
+     * @param path
+     * @param map
+     */
+    public boolean modifyResource(String path, Map<String, ? extends Object> map) {
+        if (StringUtils.endsWith(path, "/" + AUTO_CHILD_INDICATOR)) {
+            throw new IllegalArgumentException("Cannot update a auto-generation path");
+        }
+
+        if(!this.resourceExists(path)) {
+            return this.addResource(path, map) != null;
+        } else {
+            final Jedis jedis = this.getJedis();
+
+            try {
+                final String key = this.getResourceKey(path);
+
+                if(map.keySet().isEmpty()) {
+                    for (final String s : jedis.hkeys(key)) {
+                        jedis.hdel(key, s);
+                    }
+                } else {
+                    jedis.del(key);
+
+                    for (final String property : map.keySet()) {
+                        final Object obj = map.get(property);
+
+                        if (obj instanceof byte[]) {
+                            final byte[] bytes = (byte[]) obj;
+                            jedis.hset(key.getBytes(), property.getBytes(), bytes);
+                        } else {
+                            jedis.hset(key, property, this.toString(obj));
+                        }
+                    }
+                }
+
+                this.reindex(path, map);
+                this.save(jedis);
+
+                return true;
+            } finally {
+                this.returnJedis(jedis);
+            }
+        }
+    }
+
 
     /**
      * /a/b => { /a/b/c }
@@ -185,7 +218,9 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
                 }
             }
 
+            this.deindex(path);
             this.save(jedis);
+
         } finally {
             this.returnJedis(jedis);
         }
@@ -271,11 +306,122 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
     }
 
     /**
+     * SEARCH
+     */
+
+    public List<String> search(final String term) {
+        List<String> results = new ArrayList<String>();
+
+        final Jedis jedis = this.getJedis();
+        try {
+            final String key = this.getRedisKey(FULLTEXT, term);
+            for(final String path : jedis.smembers(key)) {
+                results.add(path);
+            }
+        } finally {
+            this.returnJedis(jedis);
+        }
+
+        return results;
+    }
+
+    protected int index(final String path, final Map<String, ? extends Object> data) {
+        return fulltextIndex(path, data);
+    }
+
+    private int fulltextIndex(final String path, final Map<String, ? extends Object> data) {
+        int count = 0;
+
+        String tmp = "";
+
+        for (Object value : data.values()) {
+            if (value instanceof String) {
+                tmp += ((String) value).toLowerCase();
+            } else if (value instanceof Boolean) {
+                tmp += ((Boolean) value).toString();
+            } else if (value instanceof Integer) {
+                tmp += ((Integer) value).toString();
+            } else if (value instanceof Date) {
+                tmp += ((Date) value).toString();
+            } else if (value instanceof Double) {
+                tmp += ((Double) value).toString();
+            } else if (value instanceof Float) {
+                tmp += ((Float) value).toString();
+            } else if (value instanceof Long) {
+                tmp += ((Long) value).toString();
+            } else {
+                continue;
+            }
+
+            tmp += " ";
+        }
+
+        final String[] terms = StringUtils.split(tmp, ' ');
+
+        log.debug("Terms: {}", terms);
+
+        if (terms.length == 0) {
+            return count;
+        }
+
+        final Jedis jedis = this.getJedis();
+        try {
+            for (final String term : terms) {
+                final String fulltextKey = this.getRedisKey(FULLTEXT, term);
+                final String fulltextLookupKey = this.getRedisKey(FULLTEXT_LOOKUP, path);
+
+                jedis.sadd(fulltextKey, path);
+                jedis.sadd(fulltextLookupKey, term);
+                count++;
+            }
+        } finally {
+            this.returnJedis(jedis);
+        }
+
+        return count;
+    }
+
+    protected int deindex(final String path) {
+        return fulltextDeindex(path);
+    }
+
+    private int fulltextDeindex(final String path) {
+        int count = 0;
+
+        final Jedis jedis = this.getJedis();
+        try {
+            final String fulltextLookupKey = this.getRedisKey(FULLTEXT_LOOKUP, path);
+            final Set<String> terms = jedis.smembers(fulltextLookupKey);
+
+            for (final String term : terms) {
+                final String fulltextKey = this.getRedisKey(FULLTEXT, term);
+                jedis.srem(fulltextKey, path);
+                count++;
+            }
+
+            jedis.del(fulltextLookupKey);
+        } finally {
+            this.returnJedis(jedis);
+        }
+
+        return count;
+    }
+
+    protected int reindex(final String path, final Map<String, ? extends Object> data) {
+        return fulltextReindex(path, data);
+    }
+
+    private int fulltextReindex(final String path, final Map<String, ? extends Object> data) {
+        this.fulltextDeindex(path);
+        return this.fulltextIndex(path, data);
+    }
+
+    /**
      *
      * @param obj
      * @return
      */
-    private String toString(Object obj) {
+    public String toString(Object obj) {
         if (obj instanceof Date) {
             final Date tmp = (Date) obj;
             return tmp.toString();
