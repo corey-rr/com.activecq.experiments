@@ -29,16 +29,16 @@ public interface RedisResourceManager {
     public final static String AUTO_CHILD_NODE_NAME_PREFIX = "node-";
     public final static String AUTO_CHILD_INDICATOR = "*";
 
-    public static final String REDIS_KEY_PREFIX_RESOURCES = "cq::resources::";
-    public static final  String REDIS_KEY_PREFIX_CHILDREN = "cq::children::";
+    public static final String REDIS_KEY_PREFIX_RESOURCES = "cq:r:";
+    public static final  String REDIS_KEY_PREFIX_CHILDREN = "cq:c:";
 
-    public static final String FULLTEXT = "cq::search::fulltext::";
-    public static final String FULLTEXT_LOOKUP = "cq::search::fulltext::lookup::";
+    public static final String REDIS_KEY_SEARCH_FULLTEXT = "cq:s:ft:";
+    public static final String REDIS_KEY_SEARCH_FULLTEXT_LOOKUP = "cq:s:ftl:";
 
-    public static final String PROPERTY = "cq::search::property::";
-    public static final String PROPERTY_LOOKUP = "cq::search::fulltext::lookup::";
+    public static final String REDIS_KEY_SEARCH_PROPERTY = "cq:s:p:";
+    public static final String REDIS_KEY_SEARCH_PROPERTY_LOOKUP = "cq:s:pl:";
 
-    public static final String REDIS_KEY_PREFIX_DELIMITER = "::";
+    public static final String REDIS_KEY_PREFIX_DELIMITER = ":";
 
     public static final  String REDIS_JCR_PRIMARY_TYPE = "redis:hash";
     public static final  String REDIS_SLING_RESOURCE_TYPE = "redis/resource";
