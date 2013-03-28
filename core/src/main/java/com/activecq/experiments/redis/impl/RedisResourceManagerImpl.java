@@ -42,6 +42,11 @@ import java.util.*;
         immediate = false)
 @Properties({
         @Property(
+                label = "Redis Connection Pool Service ID",
+                description = "Filter expression for selecting the implementation of the RedisConnectionPool. Example: (service.id=default)",
+                name = "redisConnectionPool.target",
+                value = "(service.uid=default)"),
+        @Property(
                 label = "Vendor",
                 name = Constants.SERVICE_VENDOR,
                 value = "ActiveCQ",
@@ -53,7 +58,7 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
 
     private boolean immediateSave = false;
 
-    @Reference
+    @Reference(target = "(service.uid=default)")
     private RedisConnectionPool redisConnectionPool;
 
     public Jedis getJedis() {
@@ -314,7 +319,7 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
 
         final Jedis jedis = this.getJedis();
         try {
-            final String key = this.getRedisKey(FULLTEXT, term);
+            final String key = this.getRedisKey(REDIS_KEY_SEARCH_FULLTEXT, term);
             for(final String path : jedis.smembers(key)) {
                 results.add(path);
             }
@@ -367,8 +372,8 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
         final Jedis jedis = this.getJedis();
         try {
             for (final String term : terms) {
-                final String fulltextKey = this.getRedisKey(FULLTEXT, term);
-                final String fulltextLookupKey = this.getRedisKey(FULLTEXT_LOOKUP, path);
+                final String fulltextKey = this.getRedisKey(REDIS_KEY_SEARCH_FULLTEXT, term);
+                final String fulltextLookupKey = this.getRedisKey(REDIS_KEY_SEARCH_FULLTEXT_LOOKUP, path);
 
                 jedis.sadd(fulltextKey, path);
                 jedis.sadd(fulltextLookupKey, term);
@@ -390,11 +395,11 @@ public class RedisResourceManagerImpl implements RedisResourceManager {
 
         final Jedis jedis = this.getJedis();
         try {
-            final String fulltextLookupKey = this.getRedisKey(FULLTEXT_LOOKUP, path);
+            final String fulltextLookupKey = this.getRedisKey(REDIS_KEY_SEARCH_FULLTEXT_LOOKUP, path);
             final Set<String> terms = jedis.smembers(fulltextLookupKey);
 
             for (final String term : terms) {
-                final String fulltextKey = this.getRedisKey(FULLTEXT, term);
+                final String fulltextKey = this.getRedisKey(REDIS_KEY_SEARCH_FULLTEXT, term);
                 jedis.srem(fulltextKey, path);
                 count++;
             }
