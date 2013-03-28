@@ -38,6 +38,7 @@ import java.util.Map;
 @Component(
         label = "Experiments - Redis Connection Pool Manager",
         description = "Redis connection pool manager.",
+        configurationFactory = true,
         metatype = true,
         immediate = false)
 @Properties({
@@ -60,6 +61,13 @@ public class RedisConnectionPoolImpl implements RedisConnectionPool {
     /**
      * OSGi Properties *
      */
+    // Host
+    private static final String DEFAULT_UID = "default";
+    private String uid = DEFAULT_UID;
+    @Property(label = "Configuration UID",
+            description = "Configuration ID used in OSGi Reference filtering (prop.uid=default)",
+            value = DEFAULT_UID)
+    private static final String PROP_UID = "service.uid";
 
     // Host
     private static final String DEFAULT_HOST = "localhost";
@@ -220,28 +228,26 @@ public class RedisConnectionPoolImpl implements RedisConnectionPool {
         this.snapshots = PropertiesUtil.toStringArray(properties.get(PROP_SNAPSHOTS), DEFAULT_SNAPSHOTS);
 
         final JedisPoolConfig poolConfig = new JedisPoolConfig();
-        /*
+
         poolConfig.setMaxActive(this.maxActive);
         poolConfig.setMinIdle(this.minIdle);
         poolConfig.setMaxIdle(this.maxIdle);
         poolConfig.setMaxWait(this.maxWait);
         poolConfig.setTestOnBorrow(this.testOnBorrow);
-        */
 
-        log.error("host: {} -- port: {}", this.host, this.port);
         this.setJedisPool(new JedisPool(poolConfig, this.host, this.port));
 
 
         /* Ping Redis on Startup */
-
         final Jedis configJedis = this.getJedis();
-        configJedis.select(0);
+
+        configJedis.select(this.redisDB);
 
         try {
-            log.error("Redis ping: " + configJedis.ping());
+            log.debug("Redis ping: " + configJedis.ping());
 
             // Set AOF Sync
-            //configJedis.configSet("appendfsync", this.aofsync);
+            configJedis.configSet("appendfsync", this.aofsync);
 
             // Set Snapshot config
             String snapshotConfig = "";
@@ -252,7 +258,7 @@ public class RedisConnectionPoolImpl implements RedisConnectionPool {
                 snapshotConfig += item;
             }
 
-            //configJedis.configSet("save", snapshotConfig);
+            configJedis.configSet("save", snapshotConfig);
         } catch(Exception ex) {
             log.error("Could not acquire a redis connection pool.");
             log.error(ex.getMessage());
