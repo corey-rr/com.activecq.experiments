@@ -59,7 +59,6 @@ import java.util.*;
 public class RedisResourceProvider implements ResourceProvider {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-
     private static final String DEFAULT_PRIMARY_TYPE = RedisResourceManager.REDIS_JCR_PRIMARY_TYPE;
     private static final String DEFAULT_RESOURCE_TYPE = RedisResourceManager.REDIS_SLING_RESOURCE_TYPE;
     private List<String> roots;
@@ -84,7 +83,6 @@ public class RedisResourceProvider implements ResourceProvider {
     }
 
     public Resource getResource(ResourceResolver resourceResolver, String path, String resourceType) {
-        log.debug("Redis getResource for: {}", path);
         // Make getResource() return as fast as possible!
         // Return null early if getResource() cannot/should not process the resource request
 
@@ -98,11 +96,8 @@ public class RedisResourceProvider implements ResourceProvider {
         // This could be any "type" of Synthetic Resource
         if(isRoot(path)) { return new SyntheticResource(resourceResolver, path, JcrConstants.NT_FOLDER); }
 
-        log.debug("Checking if path {} existing in redis", path);
-
         // If path does not exist in Redis, then return null immediately
         if(!redisManager.resourceExists(path)) { return null; }
-
 
         Map<String, String> redisMap = setDefaultProperties(new HashMap<String, String>());
         redisMap.putAll(redisManager.getResourceProperties(path));
@@ -110,22 +105,17 @@ public class RedisResourceProvider implements ResourceProvider {
         final ResourceMetadata resourceMetaData = new ResourceMetadata();
         resourceMetaData.setResolutionPath(path);
 
-        log.debug("resourceType used; {}", resourceType);
-
-
         return new RedisResource(resourceResolver, resourceMetaData, resourceType, redisMap);
     }
 
     @Override
     public Iterator<Resource> listChildren(Resource parent) {
         final String path = parent.getPath();
-        log.debug("-- Start ---------------------------");
-        log.debug("list children for: {}", path);
+
         // Check the user/group issuing the resource resolution request
         if(!accepts(parent.getResourceResolver())) { return null; }
 
         // Reject any paths that do not match the roots
-        log.debug("accept path {}: {}", path, accepts(path));
         if(!accepts(path)) { return null; }
 
         final ResourceResolver resourceResolver = parent.getResourceResolver();
@@ -135,14 +125,10 @@ public class RedisResourceProvider implements ResourceProvider {
         for(final String redisChild : redisChildren) {
             final Resource resource = this.getResource(resourceResolver, redisChild, RESOURCE_TYPE_SYNTHETIC);
 
-            log.debug("redis child: {} is null: {}", redisChild, resource == null);
-
             if(resource != null) {
-                log.debug("resource is NOT null, add to children!");
                 children.add(resource);
             }
         }
-        log.debug("-- End Children ---------------------------");
 
         return children.iterator();
     }
@@ -195,7 +181,6 @@ public class RedisResourceProvider implements ResourceProvider {
         return true;
     }
 
-
     /**
      *
      * @param redisMap
@@ -208,9 +193,6 @@ public class RedisResourceProvider implements ResourceProvider {
 
         return DEFAULT_RESOURCE_TYPE;
     }
-
-
-
 
     /**
      *
@@ -247,6 +229,7 @@ public class RedisResourceProvider implements ResourceProvider {
 
     @Deactivate
     protected void deactivate(ComponentContext ctx) {
+        this.roots = new ArrayList<String>();
     }
 
     private void configure(final ComponentContext componentContext) {
